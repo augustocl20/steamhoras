@@ -1,0 +1,13 @@
+{
+  "name": "steam-idler-render",
+  "version": "1.0.0",
+  "description": "Bot para subir horas en Steam 24/7 sin Steam Guard",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "steam-user": "^5.0.0"
+  }
+}
