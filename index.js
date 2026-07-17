@@ -1,43 +1,47 @@
 const SteamUser = require('steam-user');
 const express = require('express');
 
-// 1. Cargar las credenciales desde las variables de Render
 const accountName = process.env.STEAM_USERNAME;
 const password = process.env.STEAM_PASSWORD;
-
-// 2. IDs de los juegos (Ejemplo: 550 para Left 4 Dead 2)
 const gamesToIdle = [550]; 
 
 const client = new SteamUser();
 
-// 3. Conectar a Steam sin 2FA
 console.log('Iniciando el bot y conectando a Steam...');
-client.logOn({
-    accountName: accountName,
-    password: password
-});
+
+// 1. Verificamos que Render esté leyendo bien tus credenciales
+if (!accountName || !password) {
+    console.log('⚠️ ERROR: Las variables STEAM_USERNAME o STEAM_PASSWORD están vacías. Revisa la pestaña Environment en Render.');
+} else {
+    client.logOn({
+        accountName: accountName,
+        password: password
+    });
+}
 
 client.on('loggedOn', () => {
     console.log(`¡Conectado exitosamente a la cuenta de ${accountName}!`);
-    
-    // Configurar estado a Online
     client.setPersona(SteamUser.EPersonaState.Online); 
-    
-    // Iniciar el farmeo
     client.gamesPlayed(gamesToIdle);
     console.log(`Simulando estar jugando a los AppIDs: ${gamesToIdle.join(', ')}`);
 });
 
-client.on('error', (err) => {
-    console.error('Error crítico al conectar a Steam:', err.message);
+// 2. Detector de bloqueos por Steam Guard (Correo)
+client.on('steamGuard', (domain, callback, lastCodeWrong) => {
+    console.log(`🚨 STEAM GUARD ACTIVO: Steam ha enviado un código de seguridad a tu correo (${domain}).`);
+    console.log(`Debido a que Render está en otra ubicación, Steam ha bloqueado el acceso temporalmente.`);
 });
 
-// 4. Servidor web para mantener a Render despierto
+// 3. Detector de contraseñas incorrectas o baneos
+client.on('error', (err) => {
+    console.log(`❌ ERROR DE STEAM: ${err.message}`);
+});
+
 const app = express();
 const port = process.env.PORT || 3000; 
 
 app.get('/', (req, res) => {
-    res.send('🟢 Bot de Steam funcionando correctamente.');
+    res.send('🟢 Bot de Steam funcionando.');
 });
 
 app.listen(port, () => {
