@@ -3,6 +3,7 @@ const express = require('express');
 
 const accountName = process.env.STEAM_USERNAME;
 const password = process.env.STEAM_PASSWORD;
+const authCode = process.env.STEAM_AUTH_CODE;
 const gamesToIdle = [550]; 
 
 const client = new SteamUser();
@@ -11,20 +12,21 @@ console.log('Iniciando el bot y conectando a Steam...');
 
 // 1. Verificamos que Render esté leyendo bien tus credenciales
 if (!accountName || !password) {
-    console.log('⚠️ ERROR: Las variables STEAM_USERNAME o STEAM_PASSWORD están vacías. Revisa la pestaña Environment en Render.');
+    console.log('⚠️ ERROR: Faltan credenciales.');
 } else {
-    client.logOn({
+    // Le pasamos el código del correo si existe
+    const logOnOptions = {
         accountName: accountName,
         password: password
-    });
-}
+    };
+    
+    if (authCode) {
+        logOnOptions.authCode = authCode;
+        console.log('Usando código de seguridad de Steam Guard...');
+    }
 
-client.on('loggedOn', () => {
-    console.log(`¡Conectado exitosamente a la cuenta de ${accountName}!`);
-    client.setPersona(SteamUser.EPersonaState.Online); 
-    client.gamesPlayed(gamesToIdle);
-    console.log(`Simulando estar jugando a los AppIDs: ${gamesToIdle.join(', ')}`);
-});
+    client.logOn(logOnOptions);
+}
 
 // 2. Detector de bloqueos por Steam Guard (Correo)
 client.on('steamGuard', (domain, callback, lastCodeWrong) => {
