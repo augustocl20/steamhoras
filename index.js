@@ -132,6 +132,35 @@ app.post('/guard', (req, res) => {
     res.send(pagina(token, '✅ Código enviado. Revisa los logs para ver si se conectó.'));
 });
 
+// --- Enviar el código directo en el enlace ---
+// /codigo/1/ABC12?token=CLAVE  -> cuenta 1
+// /codigo/ABC12?token=CLAVE    -> solo si hay UNA cuenta esperando código
+function enviarCodigo(cuenta, codigo, res) {
+    const p = pendientes[cuenta];
+    if (!p) return res.status(404).send(`La cuenta ${esc(cuenta)} no está esperando código.`);
+    delete pendientes[cuenta];
+    p.callback(String(codigo).trim());
+    console.log(`[Cuenta ${cuenta}] Código recibido por enlace, verificando...`);
+    res.send(`✅ Código enviado a la cuenta ${esc(cuenta)} (${esc(p.user)}). Revisa los logs para ver si se conectó.`);
+}
+
+app.get('/codigo/:cuenta/:codigo', (req, res) => {
+    if (!process.env.GUARD_TOKEN) return res.status(503).send('Ruta desactivada: falta GUARD_TOKEN.');
+    if (!tokenValido(req.query.token)) return res.status(401).send('No autorizado.');
+    enviarCodigo(req.params.cuenta, req.params.codigo, res);
+});
+
+app.get('/codigo/:codigo', (req, res) => {
+    if (!process.env.GUARD_TOKEN) return res.status(503).send('Ruta desactivada: falta GUARD_TOKEN.');
+    if (!tokenValido(req.query.token)) return res.status(401).send('No autorizado.');
+    const ids = Object.keys(pendientes);
+    if (ids.length === 0) return res.status(404).send('No hay cuentas esperando código.');
+    if (ids.length > 1) {
+        return res.status(400).send(`Hay ${ids.length} cuentas esperando código. Usa /codigo/NUMERO_DE_CUENTA/CODIGO (cuentas: ${ids.join(', ')}).`);
+    }
+    enviarCodigo(ids[0], req.params.codigo, res);
+});
+
 app.listen(port, () => {
     console.log(`Servidor escuchando en el puerto ${port}`);
 });
