@@ -6,11 +6,13 @@ const crypto = require('crypto');
 const cuentas = [
     {
         user: process.env.STEAM_USERNAME_1,
-        pass: process.env.STEAM_PASSWORD_1
+        pass: process.env.STEAM_PASSWORD_1,
+        token: process.env.STEAM_REFRESH_TOKEN_1
     },
     {
         user: process.env.STEAM_USERNAME_2,
-        pass: process.env.STEAM_PASSWORD_2
+        pass: process.env.STEAM_PASSWORD_2,
+        token: process.env.STEAM_REFRESH_TOKEN_2
     }
 ];
 
@@ -32,9 +34,24 @@ cuentas.forEach((cuenta, index) => {
 
     console.log(`[Cuenta ${n}] Conectando a ${cuenta.user}...`);
 
-    client.logOn({
-        accountName: cuenta.user,
-        password: cuenta.pass
+    // Si hay token guardado, entra sin pedir código de Steam Guard.
+    // Si no, entra con usuario y contraseña (y pedirá código si la cuenta lo exige).
+    if (cuenta.token) {
+        console.log(`[Cuenta ${n}] Usando token guardado (sin código).`);
+        client.logOn({ refreshToken: cuenta.token });
+    } else {
+        client.logOn({
+            accountName: cuenta.user,
+            password: cuenta.pass
+        });
+    }
+
+    // Steam entrega un token de sesión tras el login con contraseña.
+    // Cópialo a Render como STEAM_REFRESH_TOKEN_${n} para no volver a pedir código.
+    client.on('refreshToken', (token) => {
+        if (cuenta.token) return;
+        console.log(`🔑 [Cuenta ${n}] Token de sesión (guárdalo en Render como STEAM_REFRESH_TOKEN_${n} y NO lo compartas):`);
+        console.log(token);
     });
 
     // Steam pide el código (llega al correo o a la app móvil)
